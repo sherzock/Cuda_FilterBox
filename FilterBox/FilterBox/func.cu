@@ -428,11 +428,11 @@ void create_filter(float **h_filter, int *filterWidth, int id_filter){
 
   switch ( id_filter )
   {
-    case 0: // Gaussiano 5x5
+    case 0: // Gaussiano 9x9
     {
-      FILTERSIZE = 5;
-      *filterWidth = 5;
-      int KernelWidth = 5;
+      FILTERSIZE = 9;
+      *filterWidth = 9;
+      int KernelWidth = 9;
       *h_filter = new float[KernelWidth * KernelWidth];
 
       const float KernelSigma = 2.;
