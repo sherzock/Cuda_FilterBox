@@ -40,7 +40,7 @@ int FILTERSIZE=5;
 #define MAX_HALF_WIDTH 4
 // maximo numero de elementos en el filtro (9x9=81)
 #define MAX_FILTER_SIZE 81
-// filtro en memoria de constantes (cache rapida, solo lectura)
+// filtro en memoria de constantes 
 __constant__ float d_filter_const[MAX_FILTER_SIZE];
 
 // comentar/descomentar para activar cada funcionalidad
@@ -50,8 +50,7 @@ __constant__ float d_filter_const[MAX_FILTER_SIZE];
 
 // convierte imagen RGBA a escala de grises
 __global__
-void grayscale(const uchar4* const inputRGBA, float* outputGray,
-    int numRows, int numCols)
+void grayscale(const uchar4* const inputRGBA, float* outputGray, int numRows, int numCols)
 {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -59,14 +58,12 @@ void grayscale(const uchar4* const inputRGBA, float* outputGray,
 
     int idx = y * numCols + x;
     uchar4 pixel = inputRGBA[idx];
-    // formula estandar de luminancia
     outputGray[idx] = 0.299f * pixel.x + 0.587f * pixel.y + 0.114f * pixel.z;
 }
 
 // calcula magnitud y direccion del gradiente con Sobel
 __global__
-void gradient_magnitude_direction(const float* input, float* magnitude, float* direction,
-    int numRows, int numCols)
+void gradient_magnitude_direction(const float* input, float* magnitude, float* direction, int numRows, int numCols)
 {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -97,8 +94,7 @@ void gradient_magnitude_direction(const float* input, float* magnitude, float* d
 
 // suprime pixels que no son maximo local en la direccion del gradiente
 __global__
-void non_max_suppression(const float* magnitude, const float* direction,
-    float* output, int numRows, int numCols)
+void non_max_suppression(const float* magnitude, const float* direction, float* output, int numRows, int numCols)
 {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -108,26 +104,35 @@ void non_max_suppression(const float* magnitude, const float* direction,
     float mag = magnitude[idx];
     // convertir angulo a grados y quedarnos en [0, 180]
     float angle = direction[idx] * 180.0f / 3.14159f;
-    if (angle < 0) angle += 180.0f;
+    if (angle < 0) 
+        angle += 180.0f;
 
     float n1 = 0, n2 = 0;
 
     // segun la direccion del gradiente, comparamos con los vecinos correspondientes
-    if ((angle < 22.5f) || (angle >= 157.5f)) {         // horizontal
-        if (x > 0)             n1 = magnitude[idx - 1];
-        if (x < numCols - 1)   n2 = magnitude[idx + 1];
+    if ((angle < 22.5f) || (angle >= 157.5f)) {// horizontal
+        if (x > 0)
+            n1 = magnitude[idx - 1];
+        if (x < numCols - 1)
+            n2 = magnitude[idx + 1];
     }
-    else if (angle < 67.5f) {                            // diagonal
-        if (x > 0 && y > 0)                             n1 = magnitude[(y - 1) * numCols + (x - 1)];
-        if (x < numCols - 1 && y < numRows - 1)         n2 = magnitude[(y + 1) * numCols + (x + 1)];
+    else if (angle < 67.5f) {// diagonal
+        if (x > 0 && y > 0)
+            n1 = magnitude[(y - 1) * numCols + (x - 1)];
+        if (x < numCols - 1 && y < numRows - 1)
+            n2 = magnitude[(y + 1) * numCols + (x + 1)];
     }
-    else if (angle < 112.5f) {                           // vertical
-        if (y > 0)             n1 = magnitude[(y - 1) * numCols + x];
-        if (y < numRows - 1)   n2 = magnitude[(y + 1) * numCols + x];
+    else if (angle < 112.5f) {// vertical
+        if (y > 0)
+            n1 = magnitude[(y - 1) * numCols + x];
+        if (y < numRows - 1)
+            n2 = magnitude[(y + 1) * numCols + x];
     }
-    else {                                               // otra diagonal
-        if (x < numCols - 1 && y > 0)           n1 = magnitude[(y - 1) * numCols + (x + 1)];
-        if (x > 0 && y < numRows - 1)           n2 = magnitude[(y + 1) * numCols + (x - 1)];
+    else {// otra diagonal
+        if (x < numCols - 1 && y > 0)
+            n1 = magnitude[(y - 1) * numCols + (x + 1)];
+        if (x > 0 && y < numRows - 1)
+            n2 = magnitude[(y + 1) * numCols + (x - 1)];
     }
 
     // solo sobrevive si es el maximo entre sus dos vecinos
@@ -160,8 +165,7 @@ void find_max(const float* input, float* blockMaxes, int n)
 
 // clasifica cada pixel
 __global__
-void double_threshold(const float* input, unsigned char* output,
-    int numRows, int numCols, float highThresh, float lowThresh)
+void double_threshold(const float* input, unsigned char* output, int numRows, int numCols, float highThresh, float lowThresh)
 {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -177,8 +181,7 @@ void double_threshold(const float* input, unsigned char* output,
 
 // convierte imagen en escala de grises a RGBA para poder guardarla
 __global__
-void gray_to_rgba(const unsigned char* gray, uchar4* outputRGBA,
-    int numRows, int numCols)
+void gray_to_rgba(const unsigned char* gray, uchar4* outputRGBA, int numRows, int numCols)
 {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -215,11 +218,9 @@ void hysteresis(unsigned char* edges, int numRows, int numCols)
     edges[idx] = 0; // ningun vecino fuerte, lo eliminamos
 }
 
-// convolucion sobre canal float (usado en Canny con filtros intermedios)
+// convolucion sobre canal float
 __global__
-void convolution_float(const float* inputChannel, float* outputChannel,
-    int numRows, int numCols,
-    const float* filter, int filterWidth)
+void convolution_float(const float* inputChannel, float* outputChannel, int numRows, int numCols, const float* filter, int filterWidth)
 {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -241,12 +242,9 @@ void convolution_float(const float* inputChannel, float* outputChannel,
     outputChannel[y * numCols + x] = result;
 }
 
-// convolucion sobre canal uchar (box filter normal)
+// convolucion (box filter normal)
 __global__
-void convolution(const unsigned char* const inputChannel,
-                   unsigned char* const outputChannel,
-                   int numRows, int numCols,
-                   const float* const filter, const int filterWidth)
+void convolution(const unsigned char* const inputChannel, unsigned char* const outputChannel, int numRows, int numCols, const float* const filter, const int filterWidth)
 {
    int x = blockIdx.x * blockDim.x + threadIdx.x;
    int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -267,7 +265,6 @@ void convolution(const unsigned char* const inputChannel,
            }
 
            int filterIdx = (fy + halfWidth) * filterWidth + (fx + halfWidth);
-           // usar memoria de constantes o global segun el define activo
            #ifdef _CONSTANT_MEMORY
                       result += d_filter_const[filterIdx] * pixelValue;
            #else
@@ -276,17 +273,14 @@ void convolution(const unsigned char* const inputChannel,
        }
    }
 
-   // clamp para que el resultado quede en 0 y 255
+   // clamp para  resultado entre 0 y 255
    result = min(255.0f, max(0.0f, result));
    outputChannel[y * numCols + x] = (unsigned char)result;
 }
 
 //carga el tile + halo en shared memory
 __global__
-void convolution_shared(const unsigned char* const inputChannel,
-    unsigned char* const outputChannel,
-    int numRows, int numCols,
-    const float* const filter, const int filterWidth)
+void convolution_shared(const unsigned char* const inputChannel, unsigned char* const outputChannel, int numRows, int numCols, const float* const filter, const int filterWidth)
 {
     int halfWidth = filterWidth / 2;
     // ancho del tile en shared memory
@@ -342,12 +336,7 @@ void convolution_shared(const unsigned char* const inputChannel,
 
 // separa imagen RGBA en 3 canales independientes R, G, B
 __global__
-void separateChannels(const uchar4* const inputImageRGBA,
-                      int numRows,
-                      int numCols,
-                      unsigned char* const redChannel,
-                      unsigned char* const greenChannel,
-                      unsigned char* const blueChannel)
+void separateChannels(const uchar4* const inputImageRGBA, int numRows, int numCols, unsigned char* const redChannel, unsigned char* const greenChannel, unsigned char* const blueChannel)
 {
     const int2 thread_2D_pos = make_int2(blockIdx.x * blockDim.x + threadIdx.x,
         blockIdx.y * blockDim.y + threadIdx.y);
@@ -365,12 +354,7 @@ void separateChannels(const uchar4* const inputImageRGBA,
 
 // junta los 3 canales R, G, B en una imagen RGBA
 __global__
-void recombineChannels(const unsigned char* const redChannel,
-                       const unsigned char* const greenChannel,
-                       const unsigned char* const blueChannel,
-                       uchar4* const outputImageRGBA,
-                       int numRows,
-                       int numCols)
+void recombineChannels(const unsigned char* const redChannel, const unsigned char* const greenChannel, const unsigned char* const blueChannel, uchar4* const outputImageRGBA, int numRows, int numCols)
 {
   const int2 thread_2D_pos = make_int2( blockIdx.x * blockDim.x + threadIdx.x,
                                         blockIdx.y * blockDim.y + threadIdx.y);
@@ -384,12 +368,12 @@ void recombineChannels(const unsigned char* const redChannel,
   unsigned char green = greenChannel[thread_1D_pos];
   unsigned char blue  = blueChannel[thread_1D_pos];
 
-  // alpha = 255 (sin transparencia)
+  //sin transparencia
   uchar4 outputPixel = make_uchar4(red, green, blue, 255);
   outputImageRGBA[thread_1D_pos] = outputPixel;
 }
 
-// canales separados en GPU (globales para no tener que pasarlos entre funciones)
+// canales separados en GPU
 unsigned char *d_red, *d_green, *d_blue;
 float* d_filter;
 
@@ -401,11 +385,11 @@ void allocateMemoryGPU(const size_t numRowsImage, const size_t numColsImage)
   checkCudaErrors(cudaMalloc(&d_blue,  sizeof(unsigned char) * numRowsImage * numColsImage));
 }
 
-// sube el filtro a GPU (a memoria de constantes o global segun el define)
+// sube el filtro a GPU
 void allocateFilterAndCopyToGPU(const float *h_filter, const size_t filterWidth, float **d_filter)
 {
     #ifdef _CONSTANT_MEMORY
-        // memoria de constantes: no hay malloc, se copia directamente al simbolo
+        // memoria de constantes, no hay malloc
         cudaMemcpyToSymbol(d_filter_const, h_filter, sizeof(float) * filterWidth * filterWidth);
     #else
         checkCudaErrors(cudaMalloc(d_filter, sizeof(float) * filterWidth * filterWidth));
@@ -522,11 +506,7 @@ void create_filter(float **h_filter, int *filterWidth, int id_filter){
 }
 
 
-void box_filter(uchar4* const d_inputImageRGBA,
-    uchar4* const d_outputImageRGBA, const size_t numRows, const size_t numCols,
-    unsigned char* d_redFiltered,
-    unsigned char* d_greenFiltered,
-    unsigned char* d_blueFiltered,
+void box_filter(uchar4* const d_inputImageRGBA, uchar4* const d_outputImageRGBA, const size_t numRows, const size_t numCols, unsigned char* d_redFiltered, unsigned char* d_greenFiltered, unsigned char* d_blueFiltered,
     int id_filter)
 {
   float *h_filter;
@@ -559,7 +539,8 @@ void box_filter(uchar4* const d_inputImageRGBA,
 
   // paso a escala de grises
   grayscale<<<gridSize, blockSize>>>(d_inputImageRGBA, d_gray, numRows, numCols);
-  cudaDeviceSynchronize(); checkCudaErrors(cudaGetLastError());
+  cudaDeviceSynchronize(); 
+  checkCudaErrors(cudaGetLastError());
 
   //gaussian blur para eliminar ruido
   float* h_gauss, * d_gauss; int gWidth;
@@ -567,34 +548,39 @@ void box_filter(uchar4* const d_inputImageRGBA,
   cudaMalloc(&d_gauss, sizeof(float) * gWidth * gWidth);
   cudaMemcpy(d_gauss, h_gauss, sizeof(float) * gWidth * gWidth, cudaMemcpyHostToDevice);
   convolution_float<<<gridSize, blockSize>>>(d_gray, d_blurred, numRows, numCols, d_gauss, gWidth);
-  cudaDeviceSynchronize(); checkCudaErrors(cudaGetLastError());
+  cudaDeviceSynchronize(); 
+  checkCudaErrors(cudaGetLastError());
   cudaFree(d_gauss);
   delete[] h_gauss;
 
   //calculo gradiente con Sobel
   gradient_magnitude_direction<<<gridSize, blockSize>>>(d_blurred, d_magnitude, d_direction, numRows, numCols);
-  cudaDeviceSynchronize(); checkCudaErrors(cudaGetLastError());
+  cudaDeviceSynchronize(); 
+  checkCudaErrors(cudaGetLastError());
 
   // suprimir no-maximos para afinar bordes
   non_max_suppression<<<gridSize, blockSize>>>(d_magnitude, d_direction, d_suppressed, numRows, numCols);
-  cudaDeviceSynchronize(); checkCudaErrors(cudaGetLastError());
+  cudaDeviceSynchronize(); 
+  checkCudaErrors(cudaGetLastError());
 
-  //reduccion para encontrar el valor maximo (necesario para los umbrales)
+  //reduccion para encontrar el valor maximo
   int blockSize1D = 256;
   int gridSize1D = (numPixels + blockSize1D - 1) / blockSize1D;
   float* d_blockMaxes;
   cudaMalloc(&d_blockMaxes, sizeof(float) * gridSize1D);
+  //como se usa shared memory se hacen dos pasadas, ...
+  // uno para encontrar el maximo de cada bloque y otro para encontrar el maximo entre esos maximos
   find_max<<<gridSize1D, blockSize1D, blockSize1D * sizeof(float)>>>(d_suppressed, d_blockMaxes, numPixels);
   find_max<<<1, blockSize1D, blockSize1D * sizeof(float)>>>(d_blockMaxes, d_blockMaxes, gridSize1D);
   float h_max;
   cudaMemcpy(&h_max, d_blockMaxes, sizeof(float), cudaMemcpyDeviceToHost);
 
   //clasificar pixels como fuertes, debiles o irrelevantes
-  double_threshold<<<gridSize, blockSize>>>(d_suppressed, d_edges, numRows, numCols,
-      0.2f * h_max, 0.1f * h_max);
-  cudaDeviceSynchronize(); checkCudaErrors(cudaGetLastError());
+  double_threshold<<<gridSize, blockSize>>>(d_suppressed, d_edges, numRows, numCols, 0.2f * h_max, 0.1f * h_max);
+  cudaDeviceSynchronize(); 
+  checkCudaErrors(cudaGetLastError());
 
-  //hysteresis - promover debiles con vecinos fuertes
+  //promover debiles con vecinos fuertes
   for (int i = 0; i < 5; i++) {
       hysteresis<<<gridSize, blockSize>>>(d_edges, numRows, numCols);
       cudaDeviceSynchronize();
@@ -602,7 +588,8 @@ void box_filter(uchar4* const d_inputImageRGBA,
 
   //convertir resultado a RGBA para guardar la imagen
   gray_to_rgba<<<gridSize, blockSize>>>(d_edges, d_outputImageRGBA, numRows, numCols);
-  cudaDeviceSynchronize(); checkCudaErrors(cudaGetLastError());
+  cudaDeviceSynchronize(); 
+  checkCudaErrors(cudaGetLastError());
 
   // liberar todos los buffers intermedios
   cudaFree(d_gray);      cudaFree(d_blurred);
@@ -613,9 +600,9 @@ void box_filter(uchar4* const d_inputImageRGBA,
 #else
 
   // separar imagen en canales R, G, B
-  separateChannels<<<gridSize, blockSize>>>(d_inputImageRGBA, numRows, numCols,
-      d_red, d_green, d_blue);
-  cudaDeviceSynchronize(); checkCudaErrors(cudaGetLastError());
+  separateChannels<<<gridSize, blockSize>>>(d_inputImageRGBA, numRows, numCols, d_red, d_green, d_blue);
+  cudaDeviceSynchronize(); 
+  checkCudaErrors(cudaGetLastError());
 
   // aplicar convolucion a cada canal por separado
 #ifdef _SHARED_MEMORY
@@ -627,12 +614,13 @@ void box_filter(uchar4* const d_inputImageRGBA,
   convolution<<<gridSize, blockSize>>>(d_green, d_greenFiltered, numRows, numCols, d_filter, filterWidth);
   convolution<<<gridSize, blockSize>>>(d_blue,  d_blueFiltered,  numRows, numCols, d_filter, filterWidth);
 #endif
-  cudaDeviceSynchronize(); checkCudaErrors(cudaGetLastError());
+  cudaDeviceSynchronize(); 
+  checkCudaErrors(cudaGetLastError());
 
   // juntar los 3 canales filtrados en la imagen de salida
-  recombineChannels<<<gridSize, blockSize>>>(d_redFiltered, d_greenFiltered, d_blueFiltered,
-      d_outputImageRGBA, numRows, numCols);
-  cudaDeviceSynchronize(); checkCudaErrors(cudaGetLastError());
+  recombineChannels<<<gridSize, blockSize>>>(d_redFiltered, d_greenFiltered, d_blueFiltered, d_outputImageRGBA, numRows, numCols);
+  cudaDeviceSynchronize(); 
+  checkCudaErrors(cudaGetLastError());
 
 #endif
 
